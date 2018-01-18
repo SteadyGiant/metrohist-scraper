@@ -6,19 +6,17 @@ scrape_metrohist = function(first_year, last_year) {
   
   for (j in first_year:last_year) {
     
-    ##############
-    ### Prelim ###
-    ##############
-    
     library(magrittr)
     library(rvest)
     library(stringr)
     library(tidyverse)
     
-    session = rvest::html_session('http://www.metrohistory.com/dbpages/NBsearch.lasso') 
+    session = rvest::html_session(
+      'http://www.metrohistory.com/dbpages/NBsearch.lasso'
+    ) 
     
     form = rvest::html_form(session)[[1]] %>%
-      rvest::set_values(year = j)
+      rvest::set_values(year = 1905)
     
     current_page = rvest::submit_form(session, form)
     
@@ -63,28 +61,32 @@ scrape_metrohist = function(first_year, last_year) {
     nums = current_page %>%
       rvest::html_nodes(css = 'td:nth-child(2)') %>%
       rvest::html_text() %>%
-      as_tibble()
+      as_tibble() %>%
+      mutate(value = stringr::str_trim(value))
     
     for (i in 1:nrow(nums)) {
       if (
         i > 1 & 
-        stringr::str_trim(nums[i, 1]) == '' & 
-        grepl(pattern = 'DOB NB', x = nums[(i-1), 1])
+        grepl(pattern = 'DOB NB', x = nums[(i-1), 1]) &
+        nums[i, 1] == ''
       ) {
         nums[i, 1] = 'blank'
-      } 
+      }
     }
     
     # Remove all entries which aren't numeric or 'blank'
     nums %<>%
       mutate(
         value = ifelse(
-          grepl(pattern = 'blank|<\\?\\?>', x = value), 
+          grepl(pattern = '^[\\(o\\)|\\(a\\)|DOB NB]', x = value), 
           value, 
-          as.numeric(value) %>% as.character
+          value %>% as.numeric() %>% as.character
         )
       ) %>%
-      filter(!is.na(value))
+      filter(
+        !is.na(value),
+        !grepl(pattern = '\\(o\\)|\\(a\\)|DOB NB', x = value)
+      )
     
     # Owners / Owner Addresses
     # Architects / Architect Addresses
@@ -173,7 +175,7 @@ scrape_metrohist = function(first_year, last_year) {
     
     combined = cbind(
       nums, bldg_adds, owners, architects, costs, descripts, comments
-      ) %>%
+    ) %>%
       set_colnames(
         c('DOB NB#', 'building_address', 'owner_address', 
           'architect_address', 'cost', 'description', 'comments')
