@@ -8,7 +8,7 @@ session = rvest::html_session(
 )
 
 form = rvest::html_form(session)[[1]] %>%
-  rvest::set_values(year = 1900)
+  rvest::set_values(year = 1905)
 
 current_page = rvest::submit_form(session, form)
 
@@ -24,7 +24,7 @@ current_result = current_page %>%
 
 costs_2 = list()
 
-while (current_result < end_result) {
+while (TRUE) {
   
   # Costs
   costs = current_page %>%
@@ -42,6 +42,18 @@ while (current_result < end_result) {
     rvest::html_nodes(css = 'td div:nth-child(1) b:nth-child(3)') %>%
     rvest::html_text() %>%
     as.numeric()
+  
+  if (current_result == end_result) {
+    costs = current_page %>%
+      rvest::html_nodes(css = 'td:nth-child(3) div font') %>%
+      rvest::html_text() %>%
+      as_tibble() %>%
+      filter(value != 'COST')
+    
+    costs_2[length(costs_2) + 1] = costs
+    
+    break
+  }
   
 }
 
