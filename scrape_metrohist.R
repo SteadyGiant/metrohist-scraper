@@ -4,12 +4,12 @@
 
 scrape_metrohist = function(first_year, last_year) {
   
+  library(magrittr)
+  library(rvest)
+  library(stringr)
+  library(tidyverse)
+  
   for (j in first_year:last_year) {
-    
-    library(magrittr)
-    library(rvest)
-    library(stringr)
-    library(tidyverse)
     
     session = rvest::html_session(
       'http://www.metrohistory.com/dbpages/NBsearch.lasso'

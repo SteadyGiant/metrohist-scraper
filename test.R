@@ -8,7 +8,7 @@ session = rvest::html_session(
 )
 
 form = rvest::html_form(session)[[1]] %>%
-  rvest::set_values(year = 1905)
+  rvest::set_values(year = 1900)
 
 current_page = rvest::submit_form(session, form)
 
