@@ -16,7 +16,7 @@ scrape_metrohist = function(first_year, last_year) {
     ) 
     
     form = rvest::html_form(session)[[1]] %>%
-      rvest::set_values(year = 1905)
+      rvest::set_values(year = j)
     
     current_page = rvest::submit_form(session, form)
     
@@ -76,16 +76,9 @@ scrape_metrohist = function(first_year, last_year) {
     
     # Remove all entries which aren't numeric or 'blank'
     nums %<>%
-      mutate(
-        value = ifelse(
-          grepl(pattern = '^[\\(o\\)|\\(a\\)|DOB NB]', x = value), 
-          value, 
-          value %>% as.numeric() %>% as.character
-        )
-      ) %>%
       filter(
-        !is.na(value),
-        !grepl(pattern = '\\(o\\)|\\(a\\)|DOB NB', x = value)
+        value != '',
+        !grepl(pattern = '\\(o\\)|\\(a\\)|DOB NB|\\/', x = value)
       )
     
     # Owners / Owner Addresses
@@ -96,13 +89,17 @@ scrape_metrohist = function(first_year, last_year) {
       rvest::html_text() %>%
       as_tibble()
     
+    for (i in 2:nrow(owns_archs)) {
+      if (
+        grepl(pattern = 'DOB NB', x = owns_archs[(i-1), 1])
+      ) {
+        owns_archs[i, 1] = ''
+      }
+    }
+    
     owns_archs %<>%
       mutate(value = stringr::str_trim(value)) %>%
-      filter(
-        value != '',
-        is.na(as.numeric(value)),
-        !grepl(pattern = 'DOB NB|<\\?\\?>', x = value)
-      ) 
+      filter(grepl(pattern = '\\(o\\)|\\(a\\)|\\/', x = value))
     
     owners = list()
     
@@ -122,6 +119,8 @@ scrape_metrohist = function(first_year, last_year) {
     architects = do.call(rbind, architects) %>%
       as_tibble()
     
+    rm(owns_archs)
+    
     # Descriptions
     # Comments
     desc_comm = current_page %>%
@@ -130,7 +129,8 @@ scrape_metrohist = function(first_year, last_year) {
       as_tibble() %>%
       mutate(value = stringr::str_trim(value)) %>%
       filter(
-        !grepl(pattern = 'COST|\\$', x = value)
+        !grepl(pattern = 'COST', x = value),
+        !(grepl(pattern = '\\$', x = value) & !grepl(pattern = '[:alpha:]', x = value))
       )
     
     for (i in 1:nrow(desc_comm)) {
@@ -168,6 +168,8 @@ scrape_metrohist = function(first_year, last_year) {
     comments = do.call(rbind, comments) %>%
       as_tibble()
     
+    rm(desc_comm)
+    
     
     ###############
     ### Combine ###
@@ -181,6 +183,7 @@ scrape_metrohist = function(first_year, last_year) {
           'architect_address', 'cost', 'description', 'comments')
       ) %>%
       mutate(year = j)
+    
     
     if (exists('metrohist_scraped')) {
       metrohist_scraped[[length(metrohist_scraped)+1]] = combined
