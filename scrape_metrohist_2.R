@@ -48,7 +48,7 @@ scrape_metrohist_2 = function(first_year, last_year) {
     while (TRUE) {
       
       # 1. Scrape data on current page and add to list.
-      results_list[length(results_list) + 1] = scrape_page(current_page) %>%
+      results_list[[length(results_list) + 1]] = scrape_page(current_page) %>%
         mutate(year = j)
       
       # 2. Navigate to next page.
@@ -66,7 +66,7 @@ scrape_metrohist_2 = function(first_year, last_year) {
       if (current_result == end_result) {
         
         # Scrape last page of results.
-        results_list[length(results_list) + 1] = scrape_page(current_page) %>%
+        results_list[[length(results_list) + 1]] = scrape_page(current_page) %>%
           mutate(year = j)
         
         # End loop.
@@ -80,9 +80,10 @@ scrape_metrohist_2 = function(first_year, last_year) {
     # We want to add it to a list of results for each year,
     # one that doesn't get overwritten in each for-loop iteration.
     if (exists('years_list')) {
-      years_list[length(years_list) + 1] = results_list %>%
-        unlist() %>%
-        as_tibble()
+      years_list[[length(years_list) + 1]] = do.call(
+        what = rbind, 
+        args = results_list
+      )
     } else {
       years_list = list()
       years_list[[1]] = results_list[[1]]
@@ -92,10 +93,8 @@ scrape_metrohist_2 = function(first_year, last_year) {
   
   # We have all results for all years.
   # We want to combine these tibbles into one big dataset.
-  # master = years_list %>%
-  #   unlist() %>%
-  #   as_tibble()
+  master = do.call(what = rbind, args = years_list)
   
-  return(years_list)
+  return(master)
   
 }

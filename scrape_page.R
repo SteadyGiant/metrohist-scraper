@@ -1,5 +1,10 @@
 scrape_page = function(page) {
   
+  library(magrittr)
+  library(rvest)
+  library(stringr)
+  library(tidyverse)
+  
   # Initialize current page tracker.
   current_page = page
   
