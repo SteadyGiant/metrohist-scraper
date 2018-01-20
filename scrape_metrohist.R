@@ -2,203 +2,102 @@
 # History: http://www.metrohistory.com/searchfront.htm
 # Searches for every year available & grabs all entries.
 
-scrape_metrohist = function(first_year, last_year) {
+scrape_metrohist_2 = function(first_year, last_year) {
+  
+  ##############
+  ### Prelim ###
+  ##############
   
   library(magrittr)
   library(rvest)
-  library(stringr)
   library(tidyverse)
   
+  # Loop through years.
   for (j in first_year:last_year) {
     
+    # Navigate to homepage.
     session = rvest::html_session(
       'http://www.metrohistory.com/dbpages/NBsearch.lasso'
     ) 
     
+    # Navigate to page 1 of search results.
     form = rvest::html_form(session)[[1]] %>%
       rvest::set_values(year = j)
     
+    # Initialize current page tracker.
     current_page = rvest::submit_form(session, form)
+    
+    # Get # of results.
+    end_result = current_page %>%
+      rvest::html_nodes(css = 'td div:nth-child(1) font:nth-child(1) b:nth-child(1)') %>%
+      rvest::html_text() %>%
+      as.numeric()
+    
+    # Initialize current result # tracker.
+    current_result = current_page %>%
+      rvest::html_nodes(css = 'td div:nth-child(1) b:nth-child(3)') %>%
+      rvest::html_text() %>%
+      as.numeric()
+    
+    # Initialize list to hold tibbles of scraped data from each result page.
+    results_list = list()
     
     
     ##############
     ### Scrape ###
     ##############
     
-    # Costs
-    costs = current_page %>%
-      rvest::html_nodes(css = 'td:nth-child(3) div font') %>%
-      rvest::html_text() %>%
-      as_tibble() %>%
-      filter(value != 'COST')
-    
-    # Building Addresses
-    bldg_adds = current_page %>%
-      rvest::html_nodes(css = 'td:nth-child(4)') %>%
-      rvest::html_text() %>%
-      as_tibble()
-    
-    # Some of the blank cells are just extra crap we don't need, but some are 
-    # actual building addresses left blank. We want to keep those. They always 
-    # appear right under an instance of 'BUILDING ADDRESS'.
-    for (i in 1:nrow(bldg_adds)) {
-      if (
-        i > 1 & 
-        bldg_adds[i, 1] == '' & 
-        grepl(pattern = 'BUILDING ADDRESS', x = bldg_adds[(i-1), 1])
-      ) {
-        bldg_adds[i, 1] = 'blank'
-      } 
-    }
-    
-    bldg_adds %<>%
-      filter(
-        value != '',
-        !grepl(pattern = 'BUILDING ADDRESS', x = value)
-      )
-    
-    # DOB NB#'s
-    nums = current_page %>%
-      rvest::html_nodes(css = 'td:nth-child(2)') %>%
-      rvest::html_text() %>%
-      as_tibble() %>%
-      mutate(value = stringr::str_trim(value))
-    
-    for (i in 1:nrow(nums)) {
-      if (
-        i > 1 & 
-        grepl(pattern = 'DOB NB', x = nums[(i-1), 1]) &
-        nums[i, 1] == ''
-      ) {
-        nums[i, 1] = 'blank'
+    # Loop through the result pages.
+    while (TRUE) {
+      
+      # 1. Scrape data on current page and add to list.
+      results_list[[length(results_list) + 1]] = scrape_page(current_page) %>%
+        mutate(year = j)
+      
+      # 2. Navigate to next page.
+      current_page %<>%
+        rvest::follow_link(i = 4, css = 'body > div:nth-child(1) > table:nth-child(4) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(1) > div:nth-child(1) > a:nth-child(3) > img:nth-child(1)')
+      
+      # 3. Store which result # we're currently at.
+      current_result = current_page %>%
+        rvest::html_nodes(css = 'td div:nth-child(1) b:nth-child(3)') %>%
+        rvest::html_text() %>%
+        as.numeric()
+      
+      # An infinite loop w/ a conditional break was added bcs the very last page
+      # of results were being ignored otherwise.
+      if (current_result == end_result) {
+        
+        # Scrape last page of results.
+        results_list[[length(results_list) + 1]] = scrape_page(current_page) %>%
+          mutate(year = j)
+        
+        # End loop.
+        break
+        
       }
+      
     }
     
-    # Remove all entries which aren't numeric or 'blank'
-    nums %<>%
-      filter(
-        value != '',
-        !grepl(pattern = '\\(o\\)|\\(a\\)|DOB NB|\\/', x = value)
+    # We have all the results for one year.
+    # We want to add it to a list of results for each year,
+    # one that doesn't get overwritten in each for-loop iteration.
+    if (exists('years_list')) {
+      years_list[[length(years_list) + 1]] = do.call(
+        what = rbind, 
+        args = results_list
       )
-    
-    # Owners / Owner Addresses
-    # Architects / Architect Addresses
-    # These can only be scraped together, due to the site layout.
-    owns_archs = current_page %>%
-      rvest::html_nodes(css = 'td:nth-child(2)') %>%
-      rvest::html_text() %>%
-      as_tibble()
-    
-    for (i in 2:nrow(owns_archs)) {
-      if (
-        grepl(pattern = 'DOB NB', x = owns_archs[(i-1), 1])
-      ) {
-        owns_archs[i, 1] = ''
-      }
-    }
-    
-    owns_archs %<>%
-      mutate(value = stringr::str_trim(value)) %>%
-      filter(grepl(pattern = '\\(o\\)|\\(a\\)|\\/', x = value))
-    
-    owners = list()
-    
-    architects = list()
-    
-    for (i in 1:nrow(owns_archs)) {
-      if (i %% 2 == 0) {
-        architects[i] = owns_archs[i, 1]
-      } else {
-        owners[i] = owns_archs[i, 1]
-      }
-    }
-    
-    owners = do.call(rbind, owners) %>%
-      as_tibble()
-    
-    architects = do.call(rbind, architects) %>%
-      as_tibble()
-    
-    rm(owns_archs)
-    
-    # Descriptions
-    # Comments
-    desc_comm = current_page %>%
-      rvest::html_nodes(css = 'td:nth-child(3) , td:nth-child(5)') %>%
-      rvest::html_text() %>%
-      as_tibble() %>%
-      mutate(value = stringr::str_trim(value)) %>%
-      filter(
-        !grepl(pattern = 'COST', x = value),
-        !(grepl(pattern = '\\$', x = value) & !grepl(pattern = '[:alpha:]', x = value))
-      )
-    
-    for (i in 1:nrow(desc_comm)) {
-      if (
-        i > 1 & 
-        stringr::str_trim(desc_comm[i, 1]) == '' & 
-        grepl(pattern = 'DESCRIPTION|COMMENTS', x = desc_comm[(i-1), 1])
-      ) {
-        desc_comm[i, 1] = 'blank'
-      } 
-    }
-    
-    desc_comm %<>%
-      mutate(value = stringr::str_trim(value)) %>%
-      filter(
-        value != '',
-        !grepl(pattern = 'DESCRIPTION|COMMENTS', x = value)
-      )
-    
-    descripts = list()
-    
-    comments = list()
-    
-    for (i in 1:nrow(desc_comm)) {
-      if (i %% 2 == 0) {
-        comments[i] = desc_comm[i, 1] # Every even row (2+).
-      } else {
-        descripts[i] = desc_comm[i, 1] # Every odd row (1+).
-      }
-    }
-    
-    descripts = do.call(rbind, descripts) %>%
-      as_tibble()
-    
-    comments = do.call(rbind, comments) %>%
-      as_tibble()
-    
-    rm(desc_comm)
-    
-    
-    ###############
-    ### Combine ###
-    ###############
-    
-    combined = cbind(
-      nums, bldg_adds, owners, architects, costs, descripts, comments
-    ) %>%
-      set_colnames(
-        c('DOB NB#', 'building_address', 'owner_address', 
-          'architect_address', 'cost', 'description', 'comments')
-      ) %>%
-      mutate(year = j)
-    
-    
-    if (exists('metrohist_scraped')) {
-      metrohist_scraped[[length(metrohist_scraped)+1]] = combined
     } else {
-      metrohist_scraped = list()
-      metrohist_scraped[[1]] = combined
+      years_list = list()
+      years_list[[1]] = results_list[[1]]
     }
     
   }
   
-  metrohist_scraped = do.call(rbind, metrohist_scraped)
+  # We have all results for all years.
+  # We want to combine these tibbles into one big dataset.
+  master = do.call(what = rbind, args = years_list)
   
-  return(metrohist_scraped)
+  return(master)
   
 }
-
-
-# https://stat4701.github.io/edav/2015/04/02/rvest_tutorial/
