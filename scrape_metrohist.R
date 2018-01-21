@@ -2,7 +2,7 @@
 # History: http://www.metrohistory.com/searchfront.htm
 # Searches for every year available & grabs all entries.
 
-scrape_metrohist_2 = function(first_year, last_year) {
+scrape_metrohist = function(first_year, last_year) {
   
   ##############
   ### Prelim ###
@@ -89,7 +89,10 @@ scrape_metrohist_2 = function(first_year, last_year) {
       )
     } else {
       years_list = list()
-      years_list[[1]] = results_list[[1]]
+      years_list[[1]] = do.call(
+        what = rbind, 
+        args = results_list
+      )
     }
     
   }

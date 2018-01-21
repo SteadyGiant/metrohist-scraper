@@ -1,5 +1,7 @@
+library(tidyverse)
+
 source('scrape_page.R')
 
-source('scrape_metrohist_2.R')
+source('scrape_metrohist.R')
 
-test2 = scrape_metrohist_2(1900, 1901)
+permits = scrape_metrohist_2(1900, 1986)

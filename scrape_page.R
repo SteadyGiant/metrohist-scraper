@@ -29,9 +29,8 @@ scrape_page = function(page) {
   # Some of the blank cells are just extra crap we don't need, but some are 
   # actual building addresses left blank. We want to keep those. They always 
   # appear right under an instance of 'BUILDING ADDRESS'.
-  for (i in 1:nrow(bldg_adds)) {
+  for (i in 2:nrow(bldg_adds)) {
     if (
-      i > 1 & 
       bldg_adds[i, 1] == '' & 
       grepl(pattern = 'BUILDING ADDRESS', x = bldg_adds[(i-1), 1])
     ) {
@@ -52,9 +51,8 @@ scrape_page = function(page) {
     as_tibble() %>%
     mutate(value = stringr::str_trim(value))
   
-  for (i in 1:nrow(nums)) {
+  for (i in 2:nrow(nums)) {
     if (
-      i > 1 & 
       grepl(pattern = 'DOB NB', x = nums[(i-1), 1]) &
       nums[i, 1] == ''
     ) {
@@ -66,7 +64,9 @@ scrape_page = function(page) {
   nums %<>%
     filter(
       value != '',
-      !grepl(pattern = '\\(o\\)|\\(a\\)|DOB NB|\\/', x = value)
+      !grepl(
+        pattern = '\\(o\\)|\\(a\\)|\\(o & a\\)|DOB NB|\\/^[:digit:]|\\/$|\\ / |^\\/',
+        x = value)
     )
   
   # Owners / Owner Addresses
@@ -119,9 +119,8 @@ scrape_page = function(page) {
       !(grepl(pattern = '\\$', x = value) & !grepl(pattern = '[:alpha:]', x = value))
     )
   
-  for (i in 1:nrow(desc_comm)) {
+  for (i in 2:nrow(desc_comm)) {
     if (
-      i > 1 & 
       stringr::str_trim(desc_comm[i, 1]) == '' & 
       grepl(pattern = 'DESCRIPTION|COMMENTS', x = desc_comm[(i-1), 1])
     ) {
