@@ -17,3 +17,6 @@ saveRDS(object = permits_2, file = 'data/permits_1943_1986.Rds')
 permits_all = rbind(permits, permits_2)
 
 saveRDS(object = permits_all, file = 'data/permits_1900_1986.Rds')
+
+# Make csv for sharing.
+write_csv(x = permits_all, path = 'data/permits_1900_1986.csv')
