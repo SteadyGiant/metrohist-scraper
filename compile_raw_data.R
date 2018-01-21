@@ -4,4 +4,4 @@ source('scrape_page.R')
 
 source('scrape_metrohist.R')
 
-permits = scrape_metrohist_2(1900, 1986)
+permits = scrape_metrohist(1900, 1986)
