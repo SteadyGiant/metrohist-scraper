@@ -2,6 +2,18 @@ library(magrittr)
 library(rvest)
 library(tidyverse)
 
+
+########################
+
+permits_all %>% 
+  group_by(year) %>% 
+  summarize(n()) %>% 
+  View()
+
+
+
+########################
+
 current_page = rvest::html_session(
   'http://www.metrohistory.com/dbpages/NBresults.lasso?-MaxRecords=10&-SkipRecords=180&-token.Action=Search%20Records&-Op=bw&year=1947'
 ) 
@@ -15,6 +27,8 @@ source('scrape_metrohist.R')
 test2 = scrape_metrohist(1900, 1900)
 
 
+
+########################
 
 current_page = rvest::html_session(
   'http://www.metrohistory.com/dbpages/NBresults.lasso?-MaxRecords=10&-SkipRecords=490&-token.Action=Search%20Records&-Op=bw&year=1900'
