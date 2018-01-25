@@ -1,6 +1,4 @@
-# Scrapes the Building Permits Database (1900-86) of the Office for Metropolitan
-# History: http://www.metrohistory.com/searchfront.htm
-# Searches for every year available & grabs all entries.
+# Calls scrape_page()
 
 scrape_metrohist = function(first_year, last_year) {
   

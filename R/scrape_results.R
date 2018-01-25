@@ -1,3 +1,5 @@
+# Early version of scraper that extracted all results for a given year.
+
 library(magrittr)
 library(rvest)
 library(stringr)
